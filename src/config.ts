@@ -63,10 +63,15 @@ export async function runSetup(): Promise<Config> {
     default: path.join(homedir(), "openrecap-reports"),
   });
 
+  const tavilyApiKey = await input({
+    message: "Tavily API Key (optional, for better learning resources search):",
+  });
+
   const commonConfig = {
     outputDir,
     format: "html" as const,
     language: "auto" as const,
+    tavilyApiKey: emptyToUndefined(tavilyApiKey),
   };
 
   const config: Config =

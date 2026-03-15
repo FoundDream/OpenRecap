@@ -135,7 +135,9 @@ function splitIntoBatches(
 
 function buildFallback(mapResults: MapResult[]): Report {
   // Group flat technologies into a single "General" category
-  const allTechs = [...new Set(mapResults.flatMap((r) => r.analysis.technologies))];
+  const allTechs = [
+    ...new Set(mapResults.flatMap((r) => r.analysis.technologies)),
+  ];
   return {
     title: "Daily Learning Report",
     overview: {
@@ -146,9 +148,8 @@ function buildFallback(mapResults: MapResult[]): Report {
         summary: r.analysis.sessionSummary,
       })),
       projectsInvolved: [...new Set(mapResults.map((r) => r.cwd))],
-      technologies: allTechs.length > 0
-        ? [{ category: "General", items: allTechs }]
-        : [],
+      technologies:
+        allTechs.length > 0 ? [{ category: "General", items: allTechs }] : [],
     },
     knowledgeCards: mapResults.flatMap((r) =>
       r.analysis.knowledgePoints.map((kp) => ({
