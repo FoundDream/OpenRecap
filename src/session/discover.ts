@@ -125,7 +125,8 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
   const projectDirs = readdirSync(CLAUDE_PROJECTS_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory());
 
-  const sessions: DiscoveredSession[] = [];
+  // Collect all candidate files synchronously
+  const candidates: { filePath: string; sessionId: string }[] = [];
 
   for (const dir of projectDirs) {
     const projectDir = path.join(CLAUDE_PROJECTS_DIR, dir.name);
@@ -139,32 +140,39 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
     }
 
     for (const file of files) {
-      const filePath = path.join(projectDir, file);
-      const sessionId = file.replace('.jsonl', '');
+      candidates.push({
+        filePath: path.join(projectDir, file),
+        sessionId: file.replace('.jsonl', ''),
+      });
+    }
+  }
 
+  // Extract info from all candidates in parallel
+  const results = await Promise.all(
+    candidates.map(async ({ filePath, sessionId }) => {
       try {
         const info = await extractSessionInfo(filePath);
-        if (!info) continue;
+        if (!info) return null;
 
-        // Check if the session's start time falls within the date range (local timezone)
         if (info.timestamp >= dateRange.start && info.timestamp <= dateRange.end) {
           const stat = statSync(filePath);
-          sessions.push({
+          return {
             sessionId,
             filePath,
             cwd: info.cwd,
             title: info.title,
             startedAt: info.timestamp,
             fileSize: stat.size,
-          });
+          } satisfies DiscoveredSession;
         }
       } catch (e) {
-        log.warn(`Failed to read session ${file}: ${e}`);
+        log.warn(`Failed to read session ${sessionId}: ${e}`);
       }
-    }
-  }
+      return null;
+    }),
+  );
 
-  // Sort by start time
+  const sessions = results.filter((s): s is DiscoveredSession => s !== null);
   sessions.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
   return sessions;
 }
