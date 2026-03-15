@@ -60,9 +60,13 @@ function decodeProjectPath(dirName: string): string {
 }
 
 /**
- * Read the first N lines of a file and find the earliest timestamp.
+ * Extract timestamp, cwd, and title from the first N lines of a session JSONL file.
  */
-async function findStartTime(filePath: string, maxLines = 10): Promise<{ timestamp: Date; cwd: string } | null> {
+async function extractSessionInfo(
+  filePath: string,
+  maxLines = 50,
+  maxTitleChars = 80,
+): Promise<{ timestamp: Date; cwd: string; title: string } | null> {
   const rl = createInterface({
     input: createReadStream(filePath, { encoding: 'utf-8' }),
     crlfDelay: Infinity,
@@ -70,6 +74,8 @@ async function findStartTime(filePath: string, maxLines = 10): Promise<{ timesta
 
   let lineCount = 0;
   let cwd = '';
+  let timestamp: Date | null = null;
+  let title = '';
 
   for await (const line of rl) {
     if (++lineCount > maxLines) break;
@@ -77,34 +83,10 @@ async function findStartTime(filePath: string, maxLines = 10): Promise<{ timesta
     try {
       const obj = JSON.parse(line);
       if (obj.cwd && !cwd) cwd = obj.cwd;
-      if (obj.timestamp) {
-        rl.close();
-        return { timestamp: new Date(obj.timestamp), cwd: cwd || obj.cwd || '' };
+      if (obj.timestamp && !timestamp) {
+        timestamp = new Date(obj.timestamp);
       }
-    } catch {
-      // skip malformed lines
-    }
-  }
-
-  return null;
-}
-
-/**
- * Extract a title from the first user message in a session JSONL file.
- */
-export async function getSessionTitle(filePath: string, maxChars = 80): Promise<string> {
-  const rl = createInterface({
-    input: createReadStream(filePath, { encoding: 'utf-8' }),
-    crlfDelay: Infinity,
-  });
-
-  let lineCount = 0;
-  for await (const line of rl) {
-    if (++lineCount > 50) break;
-    try {
-      const obj = JSON.parse(line);
-      if (obj.type === 'user' && obj.message?.content) {
-        rl.close();
+      if (!title && obj.type === 'user' && obj.message?.content) {
         const text = typeof obj.message.content === 'string'
           ? obj.message.content
           : obj.message.content
@@ -112,16 +94,30 @@ export async function getSessionTitle(filePath: string, maxChars = 80): Promise<
               .map((b: { text: string }) => b.text)
               .join(' ');
         const firstLine = text.split('\n')[0].trim();
-        if (!firstLine) continue;
-        return firstLine.length > maxChars
-          ? firstLine.slice(0, maxChars - 1) + '…'
-          : firstLine;
+        if (firstLine) {
+          title = firstLine.length > maxTitleChars
+            ? firstLine.slice(0, maxTitleChars - 1) + '…'
+            : firstLine;
+        }
       }
     } catch {
-      // skip
+      // skip malformed lines
+    }
+
+    // Early exit once all three found
+    if (timestamp && cwd && title) {
+      rl.close();
+      break;
     }
   }
-  return '(empty session)';
+
+  if (!timestamp) return null;
+
+  return {
+    timestamp,
+    cwd: cwd || '',
+    title: title || '(empty session)',
+  };
 }
 
 /**
@@ -156,7 +152,7 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
       const sessionId = file.replace('.jsonl', '');
 
       try {
-        const info = await findStartTime(filePath);
+        const info = await extractSessionInfo(filePath);
         if (!info) continue;
 
         // Check if the session's start time falls within the date range (local timezone)
@@ -167,6 +163,7 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
             filePath,
             projectPath: decodeProjectPath(dir.name),
             cwd: info.cwd,
+            title: info.title,
             startedAt: info.timestamp,
             fileSize: stat.size,
           });

@@ -42,6 +42,7 @@ export interface DiscoveredSession {
   filePath: string;
   projectPath: string;
   cwd: string;
+  title: string;
   startedAt: Date;
   fileSize: number;
 }

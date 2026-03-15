@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
 import { configExists, loadConfig, runSetup } from './config.js';
-import { parseDateOption, discoverSessions, getSessionTitle } from './session/discover.js';
+import { parseDateOption, discoverSessions } from './session/discover.js';
 import { mapAllSessions } from './analysis/map.js';
 import { reduceAnalyses } from './analysis/reduce.js';
 import { renderHTML } from './render/html.js';
@@ -220,7 +220,7 @@ async function printList(
     const s = sessions[i];
     const time = s.startedAt.toTimeString().slice(0, 5);
     const project = s.cwd.replace(process.env.HOME || '', '~');
-    const title = await getSessionTitle(s.filePath);
+    const title = s.title;
 
     console.log(
       `  ${chalk.red(String(i + 1).padStart(2, '0'))}  ${chalk.dim(time)}  ${chalk.cyan(project)}`,
