@@ -1,5 +1,5 @@
-import type { ParsedMessage, ContentBlock } from '../types.js';
-import { estimateTokens } from '../utils/tokens.js';
+import type { ContentBlock, ParsedMessage } from "../types.js";
+import { estimateTokens } from "../utils/tokens.js";
 
 const MAX_TOKENS_PER_CHUNK = 30_000;
 const MAX_TEXT_LENGTH = 2000;
@@ -18,7 +18,7 @@ const TOOL_RESULT_MAX = 500;
 export function compressSession(messages: ParsedMessage[]): string[] {
   // Level 1: filter to user + assistant only
   const filtered = messages.filter(
-    (m) => m.type === 'user' || m.type === 'assistant',
+    (m) => m.type === "user" || m.type === "assistant",
   );
 
   // Level 2: trim content
@@ -37,35 +37,39 @@ export function compressSession(messages: ParsedMessage[]): string[] {
 }
 
 function trimMessage(msg: ParsedMessage): ParsedMessage {
-  if (typeof msg.content === 'string') {
+  if (typeof msg.content === "string") {
     return { ...msg, content: truncateText(msg.content) };
   }
 
   const trimmedBlocks: ContentBlock[] = [];
   for (const block of msg.content) {
     switch (block.type) {
-      case 'thinking':
+      case "thinking":
         // Drop thinking blocks entirely (they're empty in practice)
         break;
-      case 'tool_use':
+      case "tool_use":
         trimmedBlocks.push({
           ...block,
           input: truncateText(
-            typeof block.input === 'string' ? block.input : JSON.stringify(block.input),
+            typeof block.input === "string"
+              ? block.input
+              : JSON.stringify(block.input),
             TOOL_INPUT_MAX,
           ),
         });
         break;
-      case 'tool_result':
+      case "tool_result":
         trimmedBlocks.push({
           ...block,
           content: truncateText(
-            typeof block.content === 'string' ? block.content : JSON.stringify(block.content),
+            typeof block.content === "string"
+              ? block.content
+              : JSON.stringify(block.content),
             TOOL_RESULT_MAX,
           ),
         });
         break;
-      case 'text':
+      case "text":
         trimmedBlocks.push({ ...block, text: truncateText(block.text) });
         break;
       default:
@@ -86,34 +90,39 @@ function truncateText(text: string, maxLen = MAX_TEXT_LENGTH): string {
 }
 
 function formatMessages(messages: ParsedMessage[]): string {
-  return messages.map(formatMessage).join('\n\n');
+  return messages.map(formatMessage).join("\n\n");
 }
 
 function formatMessage(msg: ParsedMessage): string {
-  const role = msg.role === 'user' ? '[user]' : '[assistant]';
+  const role = msg.role === "user" ? "[user]" : "[assistant]";
 
-  if (typeof msg.content === 'string') {
+  if (typeof msg.content === "string") {
     return `${role}\n${msg.content}`;
   }
 
   const parts: string[] = [role];
   for (const block of msg.content) {
     switch (block.type) {
-      case 'text':
+      case "text":
         parts.push(block.text);
         break;
-      case 'tool_use':
-        parts.push(`  → Tool: ${block.name}(${typeof block.input === 'string' ? block.input : JSON.stringify(block.input)})`);
+      case "tool_use":
+        parts.push(
+          `  → Tool: ${block.name}(${typeof block.input === "string" ? block.input : JSON.stringify(block.input)})`,
+        );
         break;
-      case 'tool_result': {
-        const content = typeof block.content === 'string' ? block.content : JSON.stringify(block.content);
+      case "tool_result": {
+        const content =
+          typeof block.content === "string"
+            ? block.content
+            : JSON.stringify(block.content);
         parts.push(`  ← Result: ${content}`);
         break;
       }
     }
   }
 
-  return parts.join('\n');
+  return parts.join("\n");
 }
 
 /**
@@ -128,7 +137,10 @@ function chunkByTurns(messages: ParsedMessage[]): string[] {
     const msgText = formatMessage(msg);
     const msgTokens = estimateTokens(msgText);
 
-    if (currentTokens + msgTokens > MAX_TOKENS_PER_CHUNK && currentChunk.length > 0) {
+    if (
+      currentTokens + msgTokens > MAX_TOKENS_PER_CHUNK &&
+      currentChunk.length > 0
+    ) {
       chunks.push(formatMessages(currentChunk));
       currentChunk = [];
       currentTokens = 0;

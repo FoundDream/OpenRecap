@@ -1,11 +1,11 @@
-import type { Report } from '../types.js';
+import type { Report } from "../types.js";
 
 function section(title: string, body: string): string {
   return `## ${title}\n\n${body.trim()}\n`;
 }
 
 function list(items: string[]): string {
-  return items.map((item) => `- ${item}`).join('\n');
+  return items.map((item) => `- ${item}`).join("\n");
 }
 
 function fenced(code: string): string {
@@ -13,29 +13,24 @@ function fenced(code: string): string {
 }
 
 function inlineTags(tags: string[]): string {
-  return tags.map((t) => `\`${t}\``).join(' ');
+  return tags.map((t) => `\`${t}\``).join(" ");
 }
 
 export function renderMarkdown(report: Report, dateStr: string): string {
-  const sections: string[] = [
-    `# ${report.title}`,
-    '',
-    `Date: ${dateStr}`,
-    '',
-  ];
+  const sections: string[] = [`# ${report.title}`, "", `Date: ${dateStr}`, ""];
 
   // Overview (always present)
   const overview = [
     `- Sessions: ${report.overview.totalSessions}`,
-    `- Projects: ${report.overview.projectsInvolved.join(', ') || 'None'}`,
-  ].join('\n');
-  sections.push(section('Overview', overview));
+    `- Projects: ${report.overview.projectsInvolved.join(", ") || "None"}`,
+  ].join("\n");
+  sections.push(section("Overview", overview));
 
   // Session Summaries
   if (report.overview.sessionSummaries.length > 0) {
     sections.push(
       section(
-        'Session Summaries',
+        "Session Summaries",
         list(
           report.overview.sessionSummaries.map(
             (s) => `**${s.project}**: ${s.summary}`,
@@ -49,18 +44,18 @@ export function renderMarkdown(report: Report, dateStr: string): string {
   if (report.knowledgeCards.length > 0) {
     const cards = report.knowledgeCards
       .map((card) => {
-        const tags = card.tags.length ? `\n${inlineTags(card.tags)}` : '';
+        const tags = card.tags.length ? `\n${inlineTags(card.tags)}` : "";
         return [
           `### ${card.title}`,
           `**Category:** ${card.category}${tags}`,
-          '',
+          "",
           card.explanation,
-          '',
+          "",
           `**Applicable scenarios:** ${card.applicableScenarios}`,
-        ].join('\n');
+        ].join("\n");
       })
-      .join('\n\n');
-    sections.push(section('Knowledge Cards', cards));
+      .join("\n\n");
+    sections.push(section("Knowledge Cards", cards));
   }
 
   // Practical Tips
@@ -69,38 +64,37 @@ export function renderMarkdown(report: Report, dateStr: string): string {
       .map((tip, index) => {
         const parts = [`${index + 1}. ${tip.tip}`];
         if (tip.snippet) {
-          parts.push('', fenced(tip.snippet));
+          parts.push("", fenced(tip.snippet));
         }
         if (tip.sourceProject) {
-          parts.push('', `*Source: ${tip.sourceProject}*`);
+          parts.push("", `*Source: ${tip.sourceProject}*`);
         }
-        return parts.join('\n');
+        return parts.join("\n");
       })
-      .join('\n\n');
-    sections.push(section('Practical Tips', tips));
+      .join("\n\n");
+    sections.push(section("Practical Tips", tips));
   }
 
   // Problems and Solutions
   if (report.problemsAndSolutions.length > 0) {
     const problems = report.problemsAndSolutions
-      .map(
-        (item, index) =>
-          [
-            `### ${index + 1}. ${item.problem}`,
-            `> **Cause:** ${item.cause}`,
-            '',
-            `**Solution:** ${item.solution}`,
-          ].join('\n\n'),
+      .map((item, index) =>
+        [
+          `### ${index + 1}. ${item.problem}`,
+          `> **Cause:** ${item.cause}`,
+          "",
+          `**Solution:** ${item.solution}`,
+        ].join("\n\n"),
       )
-      .join('\n\n');
-    sections.push(section('Problems and Solutions', problems));
+      .join("\n\n");
+    sections.push(section("Problems and Solutions", problems));
   }
 
   // Further Learning
   if (report.furtherLearning.length > 0) {
     sections.push(
       section(
-        'Further Learning',
+        "Further Learning",
         list(
           report.furtherLearning.map(
             (item) => `**${item.topic}**: ${item.reason}`,
@@ -110,5 +104,5 @@ export function renderMarkdown(report: Report, dateStr: string): string {
     );
   }
 
-  return sections.join('\n');
+  return sections.join("\n");
 }

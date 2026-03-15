@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
-import { select, input, confirm } from "@inquirer/prompts";
-import { configSchema, type Config } from "./types.js";
+import { confirm, input, select } from "@inquirer/prompts";
+import { type Config, configSchema } from "./types.js";
 
 const CONFIG_DIR = path.join(homedir(), ".openrecap");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -50,7 +50,10 @@ export async function runSetup(): Promise<Config> {
   const provider = await select({
     message: "Select LLM provider:",
     choices: [
-      { name: "OpenAI Compatible (recommended)", value: "openai-compatible" as const },
+      {
+        name: "OpenAI Compatible (recommended)",
+        value: "openai-compatible" as const,
+      },
       { name: "AWS Bedrock (Claude)", value: "bedrock" as const },
     ],
   });

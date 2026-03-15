@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Report } from "../types.js";
@@ -45,8 +45,7 @@ function md(str: string): string {
   const parts: string[] = [];
   const codeBlockRegex = /```(\w*)\n?([\s\S]*?)```/g;
   let lastIndex = 0;
-  let match;
-  while ((match = codeBlockRegex.exec(str)) !== null) {
+  for (const match of str.matchAll(codeBlockRegex)) {
     if (match.index > lastIndex)
       parts.push(inlineMd(str.slice(lastIndex, match.index)));
     parts.push(`<pre><code>${esc(match[2].trim())}</code></pre>`);
@@ -69,8 +68,16 @@ function inlineMd(str: string): string {
 // ─── Category coloring ───
 
 const COLOR_PALETTE = [
-  "#3b82f6", "#a855f7", "#ec4899", "#f59e0b", "#10b981",
-  "#6366f1", "#ef4444", "#14b8a6", "#f97316", "#8b5cf6",
+  "#3b82f6",
+  "#a855f7",
+  "#ec4899",
+  "#f59e0b",
+  "#10b981",
+  "#6366f1",
+  "#ef4444",
+  "#14b8a6",
+  "#f97316",
+  "#8b5cf6",
 ];
 
 function categoryColor(category: string): string {
@@ -207,9 +214,7 @@ function buildProblemsSection(
   </div>`;
 }
 
-function buildFurtherLearningSection(
-  items: Report["furtherLearning"],
-): string {
+function buildFurtherLearningSection(items: Report["furtherLearning"]): string {
   if (items.length === 0) return "";
 
   const list = items

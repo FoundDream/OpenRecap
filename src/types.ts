@@ -1,26 +1,26 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ─── JSONL Message Types ───
 
 export type MessageType =
-  | 'user'
-  | 'assistant'
-  | 'system'
-  | 'progress'
-  | 'file-history-snapshot'
-  | 'last-prompt'
-  | 'queue-operation';
+  | "user"
+  | "assistant"
+  | "system"
+  | "progress"
+  | "file-history-snapshot"
+  | "last-prompt"
+  | "queue-operation";
 
 export type ContentBlock =
-  | { type: 'text'; text: string }
-  | { type: 'tool_use'; id: string; name: string; input: unknown }
-  | { type: 'thinking'; thinking: string; signature: string }
-  | { type: 'tool_result'; tool_use_id: string; content: unknown };
+  | { type: "text"; text: string }
+  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "thinking"; thinking: string; signature: string }
+  | { type: "tool_result"; tool_use_id: string; content: unknown };
 
 export interface JSONLMessage {
   type: MessageType;
   message?: {
-    role: 'user' | 'assistant';
+    role: "user" | "assistant";
     content: string | ContentBlock[];
   };
   timestamp?: string;
@@ -50,7 +50,7 @@ export interface DiscoveredSession {
 
 export interface ParsedMessage {
   type: MessageType;
-  role?: 'user' | 'assistant';
+  role?: "user" | "assistant";
   content: string | ContentBlock[];
   timestamp?: string;
   uuid?: string;
@@ -65,7 +65,7 @@ export interface ParsedMessage {
 
 export const sessionAnalysisSchema = z.object({
   sessionSummary: z.string(),
-  language: z.enum(['zh', 'en', 'auto']),
+  language: z.enum(["zh", "en", "auto"]),
   knowledgePoints: z.array(
     z.object({
       title: z.string(),
@@ -139,23 +139,23 @@ export type Report = z.infer<typeof reportSchema>;
 const baseConfigSchema = z.object({
   model: z.string().min(1),
   outputDir: z.string().min(1),
-  format: z.enum(['html', 'md']),
-  language: z.enum(['auto', 'zh', 'en']),
+  format: z.enum(["html", "md"]),
+  language: z.enum(["auto", "zh", "en"]),
 });
 
 const bedrockConfigSchema = baseConfigSchema.extend({
-  provider: z.literal('bedrock'),
+  provider: z.literal("bedrock"),
   awsRegion: z.string().min(1),
   awsBearerToken: z.string().optional(),
 });
 
 const openAICompatibleConfigSchema = baseConfigSchema.extend({
-  provider: z.literal('openai-compatible'),
+  provider: z.literal("openai-compatible"),
   openaiBaseURL: z.string().url(),
   openaiApiKey: z.string().optional(),
 });
 
-export const configSchema = z.discriminatedUnion('provider', [
+export const configSchema = z.discriminatedUnion("provider", [
   bedrockConfigSchema,
   openAICompatibleConfigSchema,
 ]);

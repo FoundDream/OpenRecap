@@ -1,13 +1,18 @@
-import { generateObject } from 'ai';
-import type { DiscoveredSession, MapResult, SessionAnalysis, Config } from '../types.js';
-import { sessionAnalysisSchema } from '../types.js';
-import { parseSession } from '../session/parser.js';
-import { compressSession } from '../session/compress.js';
-import { sanitize } from '../privacy/sanitizer.js';
-import { getCached, setCache } from '../cache/cache.js';
-import { createModel } from './llm.js';
-import { MAP_SYSTEM_PROMPT, buildMapUserPrompt } from './prompts.js';
-import { log, spinner } from '../utils/logger.js';
+import { generateObject } from "ai";
+import { getCached, setCache } from "../cache/cache.js";
+import { sanitize } from "../privacy/sanitizer.js";
+import { compressSession } from "../session/compress.js";
+import { parseSession } from "../session/parser.js";
+import type {
+  Config,
+  DiscoveredSession,
+  MapResult,
+  SessionAnalysis,
+} from "../types.js";
+import { sessionAnalysisSchema } from "../types.js";
+import { log, spinner } from "../utils/logger.js";
+import { createModel } from "./llm.js";
+import { buildMapUserPrompt, MAP_SYSTEM_PROMPT } from "./prompts.js";
 
 /**
  * Run concurrent tasks with a concurrency limit.
@@ -43,7 +48,7 @@ async function withRetry<T>(
     } catch (e) {
       lastError = e;
       if (i < retries) {
-        const delay = baseDelayMs * Math.pow(2, i);
+        const delay = baseDelayMs * 2 ** i;
         await new Promise((r) => setTimeout(r, delay));
       }
     }
@@ -75,7 +80,7 @@ function mergeAnalyses(analyses: SessionAnalysis[]): SessionAnalysis {
   if (analyses.length === 1) return analyses[0];
 
   return {
-    sessionSummary: analyses.map((a) => a.sessionSummary).join(' '),
+    sessionSummary: analyses.map((a) => a.sessionSummary).join(" "),
     language: analyses[0].language,
     knowledgePoints: analyses.flatMap((a) => a.knowledgePoints),
     practicalTips: analyses.flatMap((a) => a.practicalTips),

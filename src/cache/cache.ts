@@ -1,10 +1,16 @@
-import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
-import path from 'node:path';
-import { getConfigDir } from '../config.js';
-import type { CacheEntry, SessionAnalysis } from '../types.js';
+import { createHash } from "node:crypto";
+import {
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
+import path from "node:path";
+import { getConfigDir } from "../config.js";
+import type { CacheEntry, SessionAnalysis } from "../types.js";
 
-const CACHE_DIR = path.join(getConfigDir(), 'cache');
+const CACHE_DIR = path.join(getConfigDir(), "cache");
 
 function ensureCacheDir(): void {
   mkdirSync(CACHE_DIR, { recursive: true });
@@ -19,11 +25,11 @@ function cacheFilePath(sessionId: string): string {
  */
 export function hashFile(filePath: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const hash = createHash('sha256');
+    const hash = createHash("sha256");
     const stream = createReadStream(filePath);
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('end', () => resolve(hash.digest('hex')));
-    stream.on('error', reject);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolve(hash.digest("hex")));
+    stream.on("error", reject);
   });
 }
 
@@ -39,7 +45,7 @@ export async function getCached(
   if (!existsSync(cachePath)) return null;
 
   try {
-    const entry: CacheEntry = JSON.parse(readFileSync(cachePath, 'utf-8'));
+    const entry: CacheEntry = JSON.parse(readFileSync(cachePath, "utf-8"));
     const currentHash = await hashFile(filePath);
     if (entry.fileHash === currentHash) {
       return entry.result;
@@ -66,5 +72,9 @@ export async function setCache(
     analyzedAt: new Date().toISOString(),
     result,
   };
-  writeFileSync(cacheFilePath(sessionId), JSON.stringify(entry, null, 2), 'utf-8');
+  writeFileSync(
+    cacheFilePath(sessionId),
+    JSON.stringify(entry, null, 2),
+    "utf-8",
+  );
 }

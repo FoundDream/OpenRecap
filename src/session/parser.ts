@@ -1,6 +1,5 @@
-import { readFileSync } from 'node:fs';
-import type { JSONLMessage, ParsedMessage, ContentBlock } from '../types.js';
-import { log } from '../utils/logger.js';
+import { readFileSync } from "node:fs";
+import type { ContentBlock, JSONLMessage, ParsedMessage } from "../types.js";
 
 /**
  * Parse a JSONL file and reconstruct the final conversation path via DAG traversal.
@@ -15,8 +14,8 @@ import { log } from '../utils/logger.js';
  * 7. Merge consecutive assistant chunks with same requestId
  */
 export function parseSession(filePath: string): ParsedMessage[] {
-  const content = readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n').filter((l) => l.trim());
+  const content = readFileSync(filePath, "utf-8");
+  const lines = content.split("\n").filter((l) => l.trim());
 
   const messages: JSONLMessage[] = [];
 
@@ -52,7 +51,7 @@ export function parseSession(filePath: string): ParsedMessage[] {
   // Find leaf nodes: uuids not referenced as parent, excluding progress type
   const leaves: JSONLMessage[] = [];
   for (const [uuid, msg] of byUuid) {
-    if (!referencedAsParent.has(uuid) && msg.type !== 'progress') {
+    if (!referencedAsParent.has(uuid) && msg.type !== "progress") {
       leaves.push(msg);
     }
   }
@@ -102,7 +101,7 @@ function toParseMessage(msg: JSONLMessage): ParsedMessage {
   return {
     type: msg.type,
     role: msg.message?.role,
-    content: msg.message?.content ?? '',
+    content: msg.message?.content ?? "",
     timestamp: msg.timestamp,
     uuid: msg.uuid,
     parentUuid: msg.parentUuid,
@@ -124,8 +123,8 @@ function mergeAssistantChunks(messages: ParsedMessage[]): ParsedMessage[] {
     const prev = result[result.length - 1];
     if (
       prev &&
-      msg.role === 'assistant' &&
-      prev.role === 'assistant' &&
+      msg.role === "assistant" &&
+      prev.role === "assistant" &&
       msg.requestId &&
       msg.requestId === prev.requestId
     ) {
@@ -142,8 +141,8 @@ function mergeAssistantChunks(messages: ParsedMessage[]): ParsedMessage[] {
 }
 
 function normalizeContent(content: string | ContentBlock[]): ContentBlock[] {
-  if (typeof content === 'string') {
-    return content ? [{ type: 'text', text: content }] : [];
+  if (typeof content === "string") {
+    return content ? [{ type: "text", text: content }] : [];
   }
   return content;
 }

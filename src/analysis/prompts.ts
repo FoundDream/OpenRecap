@@ -12,7 +12,10 @@ Guidelines:
 - NEVER include any credentials, API keys, tokens, or secrets in your output
 - Be concise but thorough — each knowledge point should be self-contained and actionable`;
 
-export function buildMapUserPrompt(sessionContent: string, project: string): string {
+export function buildMapUserPrompt(
+  sessionContent: string,
+  project: string,
+): string {
   return `Analyze this Claude Code session from project "${project}" and extract knowledge points, tips, and problem-solution pairs.
 
 <session>
@@ -37,10 +40,8 @@ export function buildReduceUserPrompt(
   sessionAnalyses: { project: string; analysis: string }[],
 ): string {
   const sessionsText = sessionAnalyses
-    .map(
-      (s, i) => `--- Session ${i + 1} (${s.project}) ---\n${s.analysis}`,
-    )
-    .join('\n\n');
+    .map((s, i) => `--- Session ${i + 1} (${s.project}) ---\n${s.analysis}`)
+    .join("\n\n");
 
   return `Consolidate these ${sessionAnalyses.length} session analyses into a single learning report:
 

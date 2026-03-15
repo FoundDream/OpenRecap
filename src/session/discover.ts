@@ -1,17 +1,22 @@
-import { readdirSync, statSync, createReadStream } from 'node:fs';
-import { homedir } from 'node:os';
-import path from 'node:path';
-import { createInterface } from 'node:readline';
-import type { DiscoveredSession } from '../types.js';
-import { log } from '../utils/logger.js';
+import { createReadStream, readdirSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
+import { createInterface } from "node:readline";
+import type { DiscoveredSession } from "../types.js";
+import { log } from "../utils/logger.js";
 
-const CLAUDE_PROJECTS_DIR = path.join(homedir(), '.claude', 'projects');
+const CLAUDE_PROJECTS_DIR = path.join(homedir(), ".claude", "projects");
 
 /**
  * Validate that a constructed Date matches the input parts (catches overflow like month 13).
  */
 function assertValidDate(d: Date, parts: number[], input: string): void {
-  if (isNaN(d.getTime()) || d.getFullYear() !== parts[0] || d.getMonth() !== parts[1] - 1 || d.getDate() !== parts[2]) {
+  if (
+    Number.isNaN(d.getTime()) ||
+    d.getFullYear() !== parts[0] ||
+    d.getMonth() !== parts[1] - 1 ||
+    d.getDate() !== parts[2]
+  ) {
     throw new Error(`Invalid date: "${input}". Expected format: YYYY-MM-DD`);
   }
 }
@@ -25,25 +30,57 @@ function assertValidDate(d: Date, parts: number[], input: string): void {
  *   "2026-03-10:2026-03-14" → range
  */
 export function parseDateOption(dateStr: string): { start: Date; end: Date } {
-  if (dateStr === 'today') {
+  if (dateStr === "today") {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const start = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const end = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
     return { start, end };
   }
 
-  if (dateStr.includes(':')) {
-    const [startStr, endStr] = dateStr.split(':');
-    const startParts = startStr.split('-').map(Number);
-    const endParts = endStr.split('-').map(Number);
-    const start = new Date(startParts[0], startParts[1] - 1, startParts[2], 0, 0, 0, 0);
-    const end = new Date(endParts[0], endParts[1] - 1, endParts[2], 23, 59, 59, 999);
+  if (dateStr.includes(":")) {
+    const [startStr, endStr] = dateStr.split(":");
+    const startParts = startStr.split("-").map(Number);
+    const endParts = endStr.split("-").map(Number);
+    const start = new Date(
+      startParts[0],
+      startParts[1] - 1,
+      startParts[2],
+      0,
+      0,
+      0,
+      0,
+    );
+    const end = new Date(
+      endParts[0],
+      endParts[1] - 1,
+      endParts[2],
+      23,
+      59,
+      59,
+      999,
+    );
     assertValidDate(start, startParts, startStr);
     assertValidDate(end, endParts, endStr);
     return { start, end };
   }
 
-  const parts = dateStr.split('-').map(Number);
+  const parts = dateStr.split("-").map(Number);
   const start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
   const end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
   assertValidDate(start, parts, dateStr);
@@ -59,14 +96,14 @@ async function extractSessionInfo(
   maxTitleChars = 80,
 ): Promise<{ timestamp: Date; cwd: string; title: string } | null> {
   const rl = createInterface({
-    input: createReadStream(filePath, { encoding: 'utf-8' }),
+    input: createReadStream(filePath, { encoding: "utf-8" }),
     crlfDelay: Infinity,
   });
 
   let lineCount = 0;
-  let cwd = '';
+  let cwd = "";
   let timestamp: Date | null = null;
-  let title = '';
+  let title = "";
 
   for await (const line of rl) {
     if (++lineCount > maxLines) break;
@@ -77,18 +114,20 @@ async function extractSessionInfo(
       if (obj.timestamp && !timestamp) {
         timestamp = new Date(obj.timestamp);
       }
-      if (!title && obj.type === 'user' && obj.message?.content) {
-        const text = typeof obj.message.content === 'string'
-          ? obj.message.content
-          : obj.message.content
-              .filter((b: { type: string }) => b.type === 'text')
-              .map((b: { text: string }) => b.text)
-              .join(' ');
-        const firstLine = text.split('\n')[0].trim();
+      if (!title && obj.type === "user" && obj.message?.content) {
+        const text =
+          typeof obj.message.content === "string"
+            ? obj.message.content
+            : obj.message.content
+                .filter((b: { type: string }) => b.type === "text")
+                .map((b: { text: string }) => b.text)
+                .join(" ");
+        const firstLine = text.split("\n")[0].trim();
         if (firstLine) {
-          title = firstLine.length > maxTitleChars
-            ? firstLine.slice(0, maxTitleChars - 1) + '…'
-            : firstLine;
+          title =
+            firstLine.length > maxTitleChars
+              ? `${firstLine.slice(0, maxTitleChars - 1)}…`
+              : firstLine;
         }
       }
     } catch {
@@ -106,24 +145,30 @@ async function extractSessionInfo(
 
   return {
     timestamp,
-    cwd: cwd || '',
-    title: title || '(empty session)',
+    cwd: cwd || "",
+    title: title || "(empty session)",
   };
 }
 
 /**
  * Discover Claude Code sessions matching a date range.
  */
-export async function discoverSessions(dateRange: { start: Date; end: Date }): Promise<DiscoveredSession[]> {
-  if (!statSync(CLAUDE_PROJECTS_DIR, { throwIfNoEntry: false })?.isDirectory()) {
+export async function discoverSessions(dateRange: {
+  start: Date;
+  end: Date;
+}): Promise<DiscoveredSession[]> {
+  if (
+    !statSync(CLAUDE_PROJECTS_DIR, { throwIfNoEntry: false })?.isDirectory()
+  ) {
     throw new Error(
       `Claude Code session directory not found: ${CLAUDE_PROJECTS_DIR}\n` +
-      'Please make sure Claude Code is installed and has been used at least once.',
+        "Please make sure Claude Code is installed and has been used at least once.",
     );
   }
 
-  const projectDirs = readdirSync(CLAUDE_PROJECTS_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory());
+  const projectDirs = readdirSync(CLAUDE_PROJECTS_DIR, {
+    withFileTypes: true,
+  }).filter((d) => d.isDirectory());
 
   // Collect all candidate files synchronously
   const candidates: { filePath: string; sessionId: string }[] = [];
@@ -133,7 +178,7 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
     let files: string[];
     try {
       files = readdirSync(projectDir).filter(
-        (f) => f.endsWith('.jsonl') && !f.startsWith('agent-'),
+        (f) => f.endsWith(".jsonl") && !f.startsWith("agent-"),
       );
     } catch {
       continue;
@@ -142,7 +187,7 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
     for (const file of files) {
       candidates.push({
         filePath: path.join(projectDir, file),
-        sessionId: file.replace('.jsonl', ''),
+        sessionId: file.replace(".jsonl", ""),
       });
     }
   }
@@ -154,7 +199,10 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
         const info = await extractSessionInfo(filePath);
         if (!info) return null;
 
-        if (info.timestamp >= dateRange.start && info.timestamp <= dateRange.end) {
+        if (
+          info.timestamp >= dateRange.start &&
+          info.timestamp <= dateRange.end
+        ) {
           const stat = statSync(filePath);
           return {
             sessionId,

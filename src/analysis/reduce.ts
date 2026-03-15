@@ -1,10 +1,10 @@
-import { generateObject } from 'ai';
-import type { Config, MapResult, Report, SessionAnalysis } from '../types.js';
-import { reportSchema } from '../types.js';
-import { createModel } from './llm.js';
-import { REDUCE_SYSTEM_PROMPT, buildReduceUserPrompt } from './prompts.js';
-import { log, spinner } from '../utils/logger.js';
-import { estimateTokens } from '../utils/tokens.js';
+import { generateObject } from "ai";
+import type { Config, MapResult, Report } from "../types.js";
+import { reportSchema } from "../types.js";
+import { log, spinner } from "../utils/logger.js";
+import { estimateTokens } from "../utils/tokens.js";
+import { createModel } from "./llm.js";
+import { buildReduceUserPrompt, REDUCE_SYSTEM_PROMPT } from "./prompts.js";
 
 const MAX_REDUCE_TOKENS = 80_000;
 
@@ -22,7 +22,9 @@ export async function reduceAnalyses(
     analysis: JSON.stringify(r.analysis, null, 2),
   }));
 
-  const totalTokens = estimateTokens(sessionInputs.map((s) => s.analysis).join(''));
+  const totalTokens = estimateTokens(
+    sessionInputs.map((s) => s.analysis).join(""),
+  );
 
   if (totalTokens <= MAX_REDUCE_TOKENS) {
     // Fits in one call
@@ -30,7 +32,9 @@ export async function reduceAnalyses(
   }
 
   // Split into batches
-  log.info(`Input too large (~${totalTokens.toLocaleString()} tokens), reducing in batches...`);
+  log.info(
+    `Input too large (~${totalTokens.toLocaleString()} tokens), reducing in batches...`,
+  );
   const batches = splitIntoBatches(sessionInputs, MAX_REDUCE_TOKENS);
   const batchReports: Report[] = [];
 
@@ -53,7 +57,7 @@ export async function reduceAnalyses(
   spin.succeed(`Reduced ${batches.length} batches.`);
 
   if (batchReports.length === 0) {
-    log.warn('All reduce batches failed, using fallback.');
+    log.warn("All reduce batches failed, using fallback.");
     return buildFallback(mapResults);
   }
 
@@ -62,7 +66,7 @@ export async function reduceAnalyses(
   }
 
   // Merge batch reports
-  const mergeSpin = spinner('Merging batch results...');
+  const mergeSpin = spinner("Merging batch results...");
   try {
     const mergeInputs = batchReports.map((r, i) => ({
       project: `Batch ${i + 1}`,
@@ -75,10 +79,10 @@ export async function reduceAnalyses(
       system: REDUCE_SYSTEM_PROMPT,
       prompt: buildReduceUserPrompt(mergeInputs),
     });
-    mergeSpin.succeed('Report generated.');
+    mergeSpin.succeed("Report generated.");
     return merged.object;
   } catch {
-    mergeSpin.fail('Merge failed, combining batches manually.');
+    mergeSpin.fail("Merge failed, combining batches manually.");
     return mergeFallback(batchReports);
   }
 }
@@ -89,7 +93,7 @@ async function singleReduce(
   config: Config,
 ): Promise<Report> {
   const model = createModel(config);
-  const spin = spinner('Generating consolidated report...');
+  const spin = spinner("Generating consolidated report...");
 
   try {
     const result = await generateObject({
@@ -98,10 +102,10 @@ async function singleReduce(
       system: REDUCE_SYSTEM_PROMPT,
       prompt: buildReduceUserPrompt(sessionInputs),
     });
-    spin.succeed('Report generated.');
+    spin.succeed("Report generated.");
     return result.object;
-  } catch (e) {
-    spin.fail('Failed to generate report.');
+  } catch (_e) {
+    spin.fail("Failed to generate report.");
     return buildFallback(mapResults);
   }
 }
@@ -131,7 +135,7 @@ function splitIntoBatches(
 
 function buildFallback(mapResults: MapResult[]): Report {
   return {
-    title: 'Daily Learning Report',
+    title: "Daily Learning Report",
     overview: {
       totalSessions: mapResults.length,
       sessionSummaries: mapResults.map((r) => ({
@@ -161,11 +165,16 @@ function buildFallback(mapResults: MapResult[]): Report {
 
 function mergeFallback(reports: Report[]): Report {
   return {
-    title: reports[0]?.title || 'Daily Learning Report',
+    title: reports[0]?.title || "Daily Learning Report",
     overview: {
-      totalSessions: reports.reduce((sum, r) => sum + r.overview.totalSessions, 0),
+      totalSessions: reports.reduce(
+        (sum, r) => sum + r.overview.totalSessions,
+        0,
+      ),
       sessionSummaries: reports.flatMap((r) => r.overview.sessionSummaries),
-      projectsInvolved: [...new Set(reports.flatMap((r) => r.overview.projectsInvolved))],
+      projectsInvolved: [
+        ...new Set(reports.flatMap((r) => r.overview.projectsInvolved)),
+      ],
     },
     knowledgeCards: reports.flatMap((r) => r.knowledgeCards),
     practicalTips: reports.flatMap((r) => r.practicalTips),
