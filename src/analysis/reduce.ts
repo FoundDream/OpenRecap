@@ -134,15 +134,21 @@ function splitIntoBatches(
 }
 
 function buildFallback(mapResults: MapResult[]): Report {
+  // Group flat technologies into a single "General" category
+  const allTechs = [...new Set(mapResults.flatMap((r) => r.analysis.technologies))];
   return {
     title: "Daily Learning Report",
     overview: {
       totalSessions: mapResults.length,
+      summary: mapResults.map((r) => r.analysis.sessionSummary).join(" "),
       sessionSummaries: mapResults.map((r) => ({
         project: r.cwd,
         summary: r.analysis.sessionSummary,
       })),
       projectsInvolved: [...new Set(mapResults.map((r) => r.cwd))],
+      technologies: allTechs.length > 0
+        ? [{ category: "General", items: allTechs }]
+        : [],
     },
     knowledgeCards: mapResults.flatMap((r) =>
       r.analysis.knowledgePoints.map((kp) => ({
@@ -163,6 +169,23 @@ function buildFallback(mapResults: MapResult[]): Report {
   };
 }
 
+function mergeTechnologies(
+  reports: Report[],
+): { category: string; items: string[] }[] {
+  const categoryMap = new Map<string, Set<string>>();
+  for (const r of reports) {
+    for (const tech of r.overview.technologies) {
+      const existing = categoryMap.get(tech.category) ?? new Set();
+      for (const item of tech.items) existing.add(item);
+      categoryMap.set(tech.category, existing);
+    }
+  }
+  return [...categoryMap.entries()].map(([category, items]) => ({
+    category,
+    items: [...items],
+  }));
+}
+
 function mergeFallback(reports: Report[]): Report {
   return {
     title: reports[0]?.title || "Daily Learning Report",
@@ -171,10 +194,12 @@ function mergeFallback(reports: Report[]): Report {
         (sum, r) => sum + r.overview.totalSessions,
         0,
       ),
+      summary: reports.map((r) => r.overview.summary).join(" "),
       sessionSummaries: reports.flatMap((r) => r.overview.sessionSummaries),
       projectsInvolved: [
         ...new Set(reports.flatMap((r) => r.overview.projectsInvolved)),
       ],
+      technologies: mergeTechnologies(reports),
     },
     knowledgeCards: reports.flatMap((r) => r.knowledgeCards),
     practicalTips: reports.flatMap((r) => r.practicalTips),

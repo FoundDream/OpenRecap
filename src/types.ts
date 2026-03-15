@@ -96,10 +96,17 @@ export const reportSchema = z.object({
   title: z.string(),
   overview: z.object({
     totalSessions: z.number(),
+    summary: z.string(),
     sessionSummaries: z.array(
       z.object({ project: z.string(), summary: z.string() }),
     ),
     projectsInvolved: z.array(z.string()),
+    technologies: z.array(
+      z.object({
+        category: z.string(),
+        items: z.array(z.string()),
+      }),
+    ),
   }),
   knowledgeCards: z.array(
     z.object({

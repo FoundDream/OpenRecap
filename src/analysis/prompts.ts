@@ -28,6 +28,8 @@ export const REDUCE_SYSTEM_PROMPT = `You are a learning report generator that co
 Your goal is to create a report that a developer can read in 5-10 minutes to review what they learned today.
 
 Guidelines:
+- Write a concise "summary" (2-4 sentences) that captures the big picture of the day's work — what was accomplished, key themes, and main takeaways
+- Group "technologies" by category (e.g. "Frontend", "Backend", "Database", "DevOps", "Testing") — only include categories that were actually used
 - Merge duplicate or overlapping knowledge points — combine, don't repeat
 - Group knowledge points by theme/category
 - Sort by learning value (most valuable first)

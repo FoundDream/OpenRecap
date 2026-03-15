@@ -19,6 +19,19 @@ function inlineTags(tags: string[]): string {
 export function renderMarkdown(report: Report, dateStr: string): string {
   const sections: string[] = [`# ${report.title}`, "", `Date: ${dateStr}`, ""];
 
+  // Summary
+  if (report.overview.summary) {
+    sections.push(`> ${report.overview.summary}`, "");
+  }
+
+  // Technologies
+  if (report.overview.technologies.length > 0) {
+    const techLines = report.overview.technologies
+      .map((t) => `- **${t.category}:** ${inlineTags(t.items)}`)
+      .join("\n");
+    sections.push(techLines, "");
+  }
+
   // Overview (always present)
   const overview = [
     `- Sessions: ${report.overview.totalSessions}`,

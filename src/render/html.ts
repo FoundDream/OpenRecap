@@ -93,6 +93,18 @@ function buildProjectTags(projects: string[]): string {
   return projects.map((p) => `<span class="otag">${esc(p)}</span>`).join("");
 }
 
+function buildTechTags(
+  technologies: { category: string; items: string[] }[],
+): string {
+  if (technologies.length === 0) return "";
+  return technologies
+    .map(
+      (t) =>
+        `<span class="tech-category">${esc(t.category)}</span>${t.items.map((item) => `<span class="otag tech">${esc(item)}</span>`).join("")}`,
+    )
+    .join("");
+}
+
 function buildSessionRows(
   sessions: { project: string; summary: string }[],
 ): string {
@@ -247,7 +259,9 @@ export function renderHTML(report: Report, dateStr: string): string {
     "{{STAT_PROJECTS}}": String(report.overview.projectsInvolved.length),
     "{{STAT_KNOWLEDGE}}": String(report.knowledgeCards.length),
     "{{STAT_PROBLEMS}}": String(report.problemsAndSolutions.length),
+    "{{SUMMARY}}": esc(report.overview.summary),
     "{{PROJECT_TAGS}}": buildProjectTags(report.overview.projectsInvolved),
+    "{{TECH_TAGS}}": buildTechTags(report.overview.technologies),
     "{{SESSION_COUNT}}": String(report.overview.totalSessions),
     "{{SESSION_ROWS}}": buildSessionRows(report.overview.sessionSummaries),
     "{{KNOWLEDGE_SECTION}}": buildKnowledgeSection(report.knowledgeCards),
