@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import chalk from 'chalk';
 import { configExists, loadConfig, runSetup } from './config.js';
-import { parseDateOption, discoverSessions } from './session/discover.js';
+import { parseDateOption, discoverSessions, getSessionTitle } from './session/discover.js';
 import { mapAllSessions } from './analysis/map.js';
 import { reduceAnalyses } from './analysis/reduce.js';
 import { renderHTML } from './render/html.js';
@@ -87,6 +87,52 @@ program
       log.success(`Report saved to ${outputPath}`);
       if (format === 'html') {
         openInBrowser(outputPath);
+      }
+    } catch (e) {
+      log.error(String(e));
+      process.exit(1);
+    }
+  });
+
+program
+  .command('list')
+  .description('List sessions for a given date')
+  .option('--date <date>', 'Target date or range', 'today')
+  .action(async (opts) => {
+    try {
+      const dateRange = parseDateOption(opts.date);
+      const dateStr = formatDateRange(opts.date, dateRange);
+
+      const spin = spinner('Discovering sessions...');
+      const sessions = await discoverSessions(dateRange);
+      spin.stop();
+
+      if (sessions.length === 0) {
+        log.info(`No sessions found for ${dateStr}.`);
+        process.exit(0);
+      }
+
+      console.log();
+      console.log(chalk.bold(`Sessions for ${dateStr}`));
+      console.log(chalk.dim(`Found ${sessions.length} sessions`));
+      console.log();
+
+      for (let i = 0; i < sessions.length; i++) {
+        const s = sessions[i];
+        const time = s.startedAt.toTimeString().slice(0, 5);
+        const project = s.cwd.replace(process.env.HOME || '', '~');
+        const title = await getSessionTitle(s.filePath);
+
+        console.log(
+          `  ${chalk.red(String(i + 1).padStart(2, '0'))}  ${chalk.dim(time)}  ${chalk.cyan(project)}`,
+        );
+        console.log(
+          `      ${title}`,
+        );
+        console.log(
+          `      ${chalk.dim(`${formatSize(s.fileSize)}  ·  ${s.sessionId}`)}`,
+        );
+        console.log();
       }
     } catch (e) {
       log.error(String(e));

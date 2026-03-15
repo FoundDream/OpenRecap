@@ -79,6 +79,41 @@ async function findStartTime(filePath: string, maxLines = 10): Promise<{ timesta
 }
 
 /**
+ * Extract a title from the first user message in a session JSONL file.
+ */
+export async function getSessionTitle(filePath: string, maxChars = 80): Promise<string> {
+  const rl = createInterface({
+    input: createReadStream(filePath, { encoding: 'utf-8' }),
+    crlfDelay: Infinity,
+  });
+
+  let lineCount = 0;
+  for await (const line of rl) {
+    if (++lineCount > 50) break;
+    try {
+      const obj = JSON.parse(line);
+      if (obj.type === 'user' && obj.message?.content) {
+        rl.close();
+        const text = typeof obj.message.content === 'string'
+          ? obj.message.content
+          : obj.message.content
+              .filter((b: { type: string }) => b.type === 'text')
+              .map((b: { text: string }) => b.text)
+              .join(' ');
+        const firstLine = text.split('\n')[0].trim();
+        if (!firstLine) continue;
+        return firstLine.length > maxChars
+          ? firstLine.slice(0, maxChars - 1) + '…'
+          : firstLine;
+      }
+    } catch {
+      // skip
+    }
+  }
+  return '(empty session)';
+}
+
+/**
  * Discover Claude Code sessions matching a date range.
  */
 export async function discoverSessions(dateRange: { start: Date; end: Date }): Promise<DiscoveredSession[]> {
