@@ -1,5 +1,10 @@
 # OpenRecap
 
+[![npm version](https://img.shields.io/npm/v/openrecap.svg)](https://www.npmjs.com/package/openrecap)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-session_reviewer-blueviolet.svg)](https://claude.ai)
+
 Review your daily Claude Code sessions and generate beautiful HTML learning reports. Turns AI-assisted coding into lasting knowledge.
 
 ## Install
@@ -98,7 +103,7 @@ Safeguards:
 ## Development
 
 ```bash
-git clone https://github.com/anthropics/openrecap.git
+git clone https://github.com/founddream/openrecap.git
 cd openrecap
 bun install
 
