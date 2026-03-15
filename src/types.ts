@@ -147,15 +147,31 @@ export type Report = z.infer<typeof reportSchema>;
 
 // ─── Config ───
 
-export interface Config {
-  provider: 'bedrock';
-  model: string;
-  awsRegion: string;
-  awsBearerToken?: string;
-  outputDir: string;
-  format: 'html' | 'md';
-  language: 'auto' | 'zh' | 'en';
-}
+const baseConfigSchema = z.object({
+  model: z.string().min(1),
+  outputDir: z.string().min(1),
+  format: z.enum(['html', 'md']),
+  language: z.enum(['auto', 'zh', 'en']),
+});
+
+const bedrockConfigSchema = baseConfigSchema.extend({
+  provider: z.literal('bedrock'),
+  awsRegion: z.string().min(1),
+  awsBearerToken: z.string().optional(),
+});
+
+const openAICompatibleConfigSchema = baseConfigSchema.extend({
+  provider: z.literal('openai-compatible'),
+  openaiBaseURL: z.string().url(),
+  openaiApiKey: z.string().optional(),
+});
+
+export const configSchema = z.discriminatedUnion('provider', [
+  bedrockConfigSchema,
+  openAICompatibleConfigSchema,
+]);
+
+export type Config = z.infer<typeof configSchema>;
 
 // ─── Cache ───
 

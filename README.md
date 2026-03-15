@@ -13,12 +13,12 @@ Review your daily Claude Code sessions and generate beautiful HTML learning repo
 npm install -g openrecap
 ```
 
-Requires Node.js 18+ and access to AWS Bedrock.
+Requires Node.js 18+ and access to AWS Bedrock or any OpenAI-compatible API.
 
 ## Quick Start
 
 ```bash
-# First run — interactive setup (region, model, bearer token)
+# First run — interactive setup (provider, endpoint/region, model, auth)
 openrecap
 
 # Review today's sessions
@@ -86,10 +86,15 @@ Options:
 
 ## Authentication
 
-OpenRecap uses AWS Bedrock. During setup you'll be asked for:
+OpenRecap supports:
 
+- **AWS Bedrock**
 - **AWS Region** (default: `us-east-1`)
-- **AWS Bearer Token** (`AWS_BEARER_TOKEN_BEDROCK`) — or falls back to standard AWS credential chain (`~/.aws/credentials`, env vars, IAM role)
+- **AWS Bearer Token** (`AWS_BEARER_TOKEN_BEDROCK`) — optional, otherwise it falls back to the standard AWS credential chain (`~/.aws/credentials`, env vars, IAM role)
+- **OpenAI-compatible APIs**
+- **Base URL** (default: `https://api.openai.com/v1`)
+- **API Key** — optional for self-hosted endpoints that do not require auth
+- **Model ID** — provider-specific, for example `gpt-4.1-mini` on the default OpenAI endpoint
 
 ## Privacy
 
