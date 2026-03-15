@@ -9,7 +9,6 @@ import { reduceAnalyses } from './analysis/reduce.js';
 import { renderHTML } from './render/html.js';
 import { renderMarkdown } from './render/markdown.js';
 import { openInBrowser } from './utils/open.js';
-import { estimateTokens } from './utils/tokens.js';
 import { log, spinner } from './utils/logger.js';
 import { getCached } from './cache/cache.js';
 import type { DiscoveredSession } from './types.js';
@@ -19,28 +18,18 @@ const program = new Command();
 program
   .name('openrecap')
   .description('Review your daily Claude Code sessions and generate learning reports')
-  .version('0.1.0')
+  .version('0.1.0');
+
+// ─── Default: list sessions ───
+
+program
   .option('--date <date>', 'Target date or range (e.g. today, 2026-03-14, 2026-03-10:2026-03-14)', 'today')
-  .option('--format <format>', 'Output format: html | md')
-  .option('--output <dir>', 'Output directory')
-  .option('--dry-run', 'Preview mode: show sessions without calling LLM')
-  .option('--no-cache', 'Skip cache for analysis (still writes cache)')
-  .option('--concurrency <n>', 'LLM concurrency limit', '3')
+  .option('--detail', 'Show estimated tokens and cache status')
   .action(async (opts) => {
     try {
-      // Load or create config
-      let config;
-      if (!configExists()) {
-        config = await runSetup();
-      } else {
-        config = loadConfig();
-      }
-
-      // Parse date
       const dateRange = parseDateOption(opts.date);
       const dateStr = formatDateRange(opts.date, dateRange);
 
-      // Discover sessions
       const spin = spinner('Discovering sessions...');
       const sessions = await discoverSessions(dateRange);
       spin.stop();
@@ -50,9 +39,41 @@ program
         process.exit(0);
       }
 
-      // Dry-run mode
-      if (opts.dryRun) {
-        await printDryRun(sessions, dateStr);
+      await printList(sessions, dateStr, opts.detail);
+    } catch (e) {
+      log.error(String(e));
+      process.exit(1);
+    }
+  });
+
+// ─── generate: run LLM analysis ───
+
+program
+  .command('generate')
+  .description('Generate a learning report')
+  .option('--date <date>', 'Target date or range', 'today')
+  .option('--format <format>', 'Output format: html | md')
+  .option('--output <dir>', 'Output directory')
+  .option('--no-cache', 'Skip cache for analysis (still writes cache)')
+  .option('--concurrency <n>', 'LLM concurrency limit', '3')
+  .action(async (opts) => {
+    try {
+      let config;
+      if (!configExists()) {
+        config = await runSetup();
+      } else {
+        config = loadConfig();
+      }
+
+      const dateRange = parseDateOption(opts.date);
+      const dateStr = formatDateRange(opts.date, dateRange);
+
+      const spin = spinner('Discovering sessions...');
+      const sessions = await discoverSessions(dateRange);
+      spin.stop();
+
+      if (sessions.length === 0) {
+        log.info(`No sessions found for ${dateStr}.`);
         process.exit(0);
       }
 
@@ -94,51 +115,7 @@ program
     }
   });
 
-program
-  .command('list')
-  .description('List sessions for a given date')
-  .option('--date <date>', 'Target date or range', 'today')
-  .action(async (opts) => {
-    try {
-      const dateRange = parseDateOption(opts.date);
-      const dateStr = formatDateRange(opts.date, dateRange);
-
-      const spin = spinner('Discovering sessions...');
-      const sessions = await discoverSessions(dateRange);
-      spin.stop();
-
-      if (sessions.length === 0) {
-        log.info(`No sessions found for ${dateStr}.`);
-        process.exit(0);
-      }
-
-      console.log();
-      console.log(chalk.bold(`Sessions for ${dateStr}`));
-      console.log(chalk.dim(`Found ${sessions.length} sessions`));
-      console.log();
-
-      for (let i = 0; i < sessions.length; i++) {
-        const s = sessions[i];
-        const time = s.startedAt.toTimeString().slice(0, 5);
-        const project = s.cwd.replace(process.env.HOME || '', '~');
-        const title = await getSessionTitle(s.filePath);
-
-        console.log(
-          `  ${chalk.red(String(i + 1).padStart(2, '0'))}  ${chalk.dim(time)}  ${chalk.cyan(project)}`,
-        );
-        console.log(
-          `      ${title}`,
-        );
-        console.log(
-          `      ${chalk.dim(`${formatSize(s.fileSize)}  ·  ${s.sessionId}`)}`,
-        );
-        console.log();
-      }
-    } catch (e) {
-      log.error(String(e));
-      process.exit(1);
-    }
-  });
+// ─── config ───
 
 program
   .command('config')
@@ -195,49 +172,56 @@ function resolveFormat(value: string): 'html' | 'md' {
   throw new Error(`Unsupported format: ${value}. Expected "html" or "md".`);
 }
 
-async function printDryRun(
+async function printList(
   sessions: DiscoveredSession[],
   dateStr: string,
+  detail: boolean,
 ): Promise<void> {
   console.log();
-  console.log(chalk.bold('OpenRecap - Dry Run'));
-  console.log(`Date: ${dateStr}`);
+  console.log(chalk.bold(`Sessions for ${dateStr}`));
+  console.log(chalk.dim(`Found ${sessions.length} sessions`));
   console.log();
-  console.log(`Found ${chalk.bold(String(sessions.length))} sessions:`);
-  console.log();
-
-  // Table header
-  const header = `  ${'#'.padStart(3)} │ ${'Project'.padEnd(34)} │ ${'Started'.padEnd(8)} │ ${'Size'.padEnd(9)} │ ${'Est. Tokens'.padEnd(11)} │ Cached`;
-  const separator = `  ${'─'.repeat(3)}┼${'─'.repeat(36)}┼${'─'.repeat(10)}┼${'─'.repeat(11)}┼${'─'.repeat(13)}┼${'─'.repeat(7)}`;
-  console.log(header);
-  console.log(separator);
 
   let totalTokens = 0;
   let cachedCount = 0;
 
   for (let i = 0; i < sessions.length; i++) {
     const s = sessions[i];
-
-    // Estimate tokens from file size (rough: ~0.25 tokens per byte after compression)
-    const estTokens = Math.round(s.fileSize * 0.085);
-    totalTokens += estTokens;
-
-    // Check cache
-    const cached = await getCached(s.sessionId, s.filePath);
-    if (cached) cachedCount++;
-
-    const time = s.startedAt.toTimeString().slice(0, 8);
+    const time = s.startedAt.toTimeString().slice(0, 5);
     const project = s.cwd.replace(process.env.HOME || '', '~');
-    const truncProject = project.length > 34 ? project.slice(0, 31) + '...' : project;
+    const title = await getSessionTitle(s.filePath);
 
     console.log(
-      `  ${String(i + 1).padStart(3)} │ ${truncProject.padEnd(34)} │ ${time} │ ${formatSize(s.fileSize).padEnd(9)} │ ${`~${estTokens.toLocaleString()}`.padEnd(11)} │ ${cached ? chalk.green('✓') : chalk.dim('✗')}`,
+      `  ${chalk.red(String(i + 1).padStart(2, '0'))}  ${chalk.dim(time)}  ${chalk.cyan(project)}`,
     );
+    console.log(
+      `      ${title}`,
+    );
+
+    if (detail) {
+      const estTokens = Math.round(s.fileSize * 0.085);
+      totalTokens += estTokens;
+      const cached = await getCached(s.sessionId, s.filePath);
+      if (cached) cachedCount++;
+      console.log(
+        `      ${chalk.dim(`${formatSize(s.fileSize)}  ·  ~${estTokens.toLocaleString()} tokens  ·  cache: ${cached ? chalk.green('✓') : chalk.dim('✗')}`)}`,
+      );
+    } else {
+      console.log(
+        `      ${chalk.dim(`${formatSize(s.fileSize)}  ·  ${s.sessionId}`)}`,
+      );
+    }
+
+    console.log();
   }
 
-  console.log();
-  console.log(
-    `Total: ${sessions.length} sessions | ~${totalTokens.toLocaleString()} estimated tokens | ${cachedCount} cached`,
-  );
+  if (detail) {
+    console.log(
+      chalk.dim(`Total: ~${totalTokens.toLocaleString()} estimated tokens | ${cachedCount} cached`),
+    );
+    console.log();
+  }
+
+  console.log(chalk.dim(`Run ${chalk.white('openrecap generate --date ' + (dateStr.includes(' ') ? `"${dateStr}"` : dateStr))} to create a report.`));
   console.log();
 }
