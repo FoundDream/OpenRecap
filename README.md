@@ -1,139 +1,121 @@
 # OpenRecap
 
-OpenRecap is a CLI that reviews your Claude Code sessions and turns them into a concise learning report.
+Review your daily Claude Code sessions and generate beautiful HTML learning reports. Turns AI-assisted coding into lasting knowledge.
 
-Instead of replaying every prompt and tool call, OpenRecap extracts what mattered: session goals, knowledge points, useful techniques, problems solved, and follow-up topics worth studying.
+## Install
 
-## Status
+```bash
+npm install -g openrecap
+```
 
-This project is in an early stage and currently targets a focused v1:
-
-- AWS Bedrock only
-- Claude Code session files as the source of truth
-- HTML report output
-- Local cache and local report storage
-
-## Features
-
-- Scans Claude Code session history from `~/.claude/projects/`
-- Reconstructs the final conversation path from the session DAG
-- Filters noisy records such as progress events and snapshots
-- Sanitizes common secrets before sending content to the model
-- Runs per-session analysis and a final reduce step with structured output
-- Generates a readable HTML report you can open locally
-- Supports dry-run mode to preview what will be analyzed
-- Caches session analysis results to avoid unnecessary repeat work
-
-## How It Works
-
-1. Discover sessions for a target day or date range
-2. Parse JSONL session files and reconstruct the final accepted path
-3. Compress and sanitize the session content
-4. Run LLM analysis per session
-5. Merge all session analyses into a single report
-6. Render the final report as HTML
-
-## Requirements
-
-- Node.js 18+
-- Bun for development workflows (`bun install`, `bun test`)
-- Access to AWS Bedrock
-
-For Bedrock auth, OpenRecap supports:
-
-- an AWS bearer token entered during setup
-- standard AWS credentials / SigV4 resolution from your environment
+Requires Node.js 18+ and access to AWS Bedrock.
 
 ## Quick Start
 
 ```bash
-bun install
-bun run build
-node dist/index.js
+# First run — interactive setup (region, model, bearer token)
+openrecap
+
+# Review today's sessions
+openrecap
+
+# Review a specific date
+openrecap --date 2026-03-14
+
+# Preview without calling LLM
+openrecap --dry-run
 ```
 
-On first run, OpenRecap will walk you through setup and create a config file at `~/.openrecap/config.json`.
+On first run, OpenRecap creates `~/.openrecap/config.json` through an interactive guide.
 
 ## Usage
 
-```bash
-# Review today
-openrecap
+```
+openrecap [options]        Generate a learning report
+openrecap config           Re-run setup
 
-# Review a specific day
-openrecap --date 2026-03-14
-
-# Review a date range
-openrecap --date 2026-03-10:2026-03-14
-
-# Write reports to a custom directory
-openrecap --output ~/openrecap-reports
-
-# Preview matching sessions without calling the LLM
-openrecap --dry-run
-
-# Re-run setup
-openrecap config
+Options:
+  --date <date>      Target date or range (default: today)
+                     Examples: 2026-03-14, 2026-03-10:2026-03-14
+  --output <dir>     Output directory (default: ~/openrecap-reports)
+  --dry-run          Show matching sessions without calling LLM
+  --no-cache         Skip cached analysis, re-analyze all sessions
+  --concurrency <n>  LLM concurrency limit (default: 3)
 ```
 
-## Output
+## What It Does
 
-The current renderer generates a single self-contained HTML report with sections for:
+```
+~/.claude/projects/*/*.jsonl
+        │
+        ▼
+   ┌─────────┐     ┌───────────┐     ┌────────┐     ┌────────┐
+   │ Discover │ ──▶ │ Parse DAG │ ──▶ │ Compress│ ──▶ │Sanitize│
+   │ Sessions │     │ + Extract │     │ Content │     │Secrets │
+   └─────────┘     └───────────┘     └────────┘     └────────┘
+                                                         │
+                    ┌───────────┐     ┌────────┐         ▼
+                    │  Reduce   │ ◀── │  Map    │ ◀── LLM per
+                    │  Merge    │     │ Analyze │    session
+                    └───────────┘     └────────┘
+                         │
+                         ▼
+                   HTML Report
+```
 
-- overview
-- knowledge cards
-- practical tips
-- problems and solutions
-- further learning
+1. **Discover** — Scans `~/.claude/projects/` for sessions matching the target date
+2. **Parse** — Reconstructs the final conversation path from the session DAG (handles branching, compaction, sub-agents)
+3. **Compress** — Filters noise (progress events, snapshots), truncates tool I/O, chunks large sessions
+4. **Sanitize** — Redacts API keys, AWS credentials, JWTs, connection strings, private keys
+5. **Map** — Analyzes each session with LLM, extracts knowledge points, tips, and problem-solution pairs
+6. **Reduce** — Merges all session analyses into one consolidated report
+7. **Render** — Generates a self-contained HTML report and opens it in the browser
 
-Reports are saved locally. Cache and config data live under `~/.openrecap/`.
+## Report Sections
+
+- **Overview** — Session count, projects involved, one-line summary per session
+- **Knowledge Points** — Interactive notebook with category tabs, filterable by topic
+- **Practical Tips** — Reusable code snippets and techniques
+- **Problems & Solutions** — Collapsible cards: problem → cause → solution
+- **Further Learning** — Suggested topics based on the day's work
+
+## Authentication
+
+OpenRecap uses AWS Bedrock. During setup you'll be asked for:
+
+- **AWS Region** (default: `us-east-1`)
+- **AWS Bearer Token** (`AWS_BEARER_TOKEN_BEDROCK`) — or falls back to standard AWS credential chain (`~/.aws/credentials`, env vars, IAM role)
 
 ## Privacy
 
-OpenRecap analyzes Claude Code session content with an external LLM provider. Session data may include code, file paths, and terminal output.
+Session data is sent to your configured LLM provider for analysis.
 
-Current safeguards:
-
-- explicit consent during setup
-- best-effort secret sanitization before model calls
-- local-only storage for generated reports and cache
-
-You should still treat this as a tool for environments where sending session content to your configured provider is acceptable.
+Safeguards:
+- Explicit consent prompt during setup
+- Best-effort secret redaction before any LLM call
+- Reports and cache stored locally only (`~/.openrecap/`)
 
 ## Development
 
 ```bash
-# Build the CLI
-bun run build
+git clone https://github.com/anthropics/openrecap.git
+cd openrecap
+bun install
 
-# Run tests
+# Run directly (no build needed)
+bun run src/index.ts -- --dry-run
+
+# Tests
 bun test
 
-# Type-check
-bunx tsc --noEmit
+# Type check
+bun run typecheck
+
+# Build
+bun run build
+./dist/index.js --dry-run
 ```
-
-## Repository Layout
-
-```text
-src/
-  analysis/   LLM prompts, map/reduce, provider wiring
-  cache/      local cache handling
-  privacy/    secret sanitization
-  render/     report rendering
-  session/    session discovery, parsing, compression
-  utils/      logging, token estimates, browser open
-tests/        fixtures and unit tests
-docs/         planning notes
-```
-
-## Roadmap
-
-- Improve report design and HTML presentation
-- Add project-level filtering
-- Finalize prompt/schema design for report quality
-- Add more provider support after the Bedrock-first release is stable
 
 ## License
 
-License not added yet.
+MIT

@@ -1,5 +1,5 @@
-import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
-import type { Config } from '../types.js';
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import type { Config } from "../types.js";
 
 export function createModel(config: Config) {
   const bedrock = createAmazonBedrock({
