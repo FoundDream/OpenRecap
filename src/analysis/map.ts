@@ -108,7 +108,6 @@ export async function mapAllSessions(
         if (cached) {
           results.push({
             sessionId: session.sessionId,
-            projectPath: session.projectPath,
             cwd: session.cwd,
             analysis: cached,
           });
@@ -133,7 +132,7 @@ export async function mapAllSessions(
       const chunkResults: SessionAnalysis[] = [];
       for (const chunk of sanitizedChunks) {
         const analysis = await withRetry(
-          () => analyzeChunk(model, chunk, session.projectPath),
+          () => analyzeChunk(model, chunk, session.cwd),
           2, // retries for rate limit
           2000, // base delay 2s
         );
@@ -147,7 +146,6 @@ export async function mapAllSessions(
 
       results.push({
         sessionId: session.sessionId,
-        projectPath: session.projectPath,
         cwd: session.cwd,
         analysis: merged,
       });

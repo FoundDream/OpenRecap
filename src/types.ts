@@ -40,7 +40,6 @@ export interface JSONLMessage {
 export interface DiscoveredSession {
   sessionId: string;
   filePath: string;
-  projectPath: string;
   cwd: string;
   title: string;
   startedAt: Date;
@@ -187,7 +186,6 @@ export interface CacheEntry {
 
 export interface MapResult {
   sessionId: string;
-  projectPath: string;
   cwd: string;
   analysis: SessionAnalysis;
 }

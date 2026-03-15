@@ -51,15 +51,6 @@ export function parseDateOption(dateStr: string): { start: Date; end: Date } {
 }
 
 /**
- * Decode a project directory name back to a path.
- * `-Users-foo-code` → `/Users/foo/code`
- */
-function decodeProjectPath(dirName: string): string {
-  // The encoding replaces `/` with `-`, so the first `-` was a leading `/`
-  return '/' + dirName.slice(1).replace(/-/g, '/');
-}
-
-/**
  * Extract timestamp, cwd, and title from the first N lines of a session JSONL file.
  */
 async function extractSessionInfo(
@@ -161,7 +152,6 @@ export async function discoverSessions(dateRange: { start: Date; end: Date }): P
           sessions.push({
             sessionId,
             filePath,
-            projectPath: decodeProjectPath(dir.name),
             cwd: info.cwd,
             title: info.title,
             startedAt: info.timestamp,

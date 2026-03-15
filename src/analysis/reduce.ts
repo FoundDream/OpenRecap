@@ -18,7 +18,7 @@ export async function reduceAnalyses(
   config: Config,
 ): Promise<Report> {
   const sessionInputs = mapResults.map((r) => ({
-    project: r.projectPath,
+    project: r.cwd,
     analysis: JSON.stringify(r.analysis, null, 2),
   }));
 
@@ -135,10 +135,10 @@ function buildFallback(mapResults: MapResult[]): Report {
     overview: {
       totalSessions: mapResults.length,
       sessionSummaries: mapResults.map((r) => ({
-        project: r.projectPath,
+        project: r.cwd,
         summary: r.analysis.sessionSummary,
       })),
-      projectsInvolved: [...new Set(mapResults.map((r) => r.projectPath))],
+      projectsInvolved: [...new Set(mapResults.map((r) => r.cwd))],
     },
     knowledgeCards: mapResults.flatMap((r) =>
       r.analysis.knowledgePoints.map((kp) => ({
@@ -149,7 +149,7 @@ function buildFallback(mapResults: MapResult[]): Report {
     practicalTips: mapResults.flatMap((r) =>
       r.analysis.practicalTips.map((tip) => ({
         ...tip,
-        sourceProject: r.projectPath,
+        sourceProject: r.cwd,
       })),
     ),
     problemsAndSolutions: mapResults.flatMap(
