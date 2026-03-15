@@ -1,0 +1,31 @@
+{
+  "name": "openrecap",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "openrecap": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ai": "^6.0",
+    "@ai-sdk/amazon-bedrock": "^4.0",
+    "commander": "^14.0",
+    "@inquirer/prompts": "^7.0",
+    "chalk": "^5.4",
+    "ora": "^8.2",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.3",
+    "typescript": "^5.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,5 @@
+{"type":"user","message":{"role":"user","content":"Start of conversation"},"timestamp":"2026-03-15T09:00:00.000Z","sessionId":"test-compact","cwd":"/Users/test/project","uuid":"c-1","parentUuid":null}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello! How can I help?"}]},"timestamp":"2026-03-15T09:00:05.000Z","sessionId":"test-compact","uuid":"c-2","parentUuid":"c-1","requestId":"req-1"}
+{"type":"system","message":{"role":"user","content":"compact_boundary"},"timestamp":"2026-03-15T09:30:00.000Z","sessionId":"test-compact","uuid":"c-3","parentUuid":null,"logicalParentUuid":"c-2"}
+{"type":"user","message":{"role":"user","content":"Continue our work on the parser"},"timestamp":"2026-03-15T09:30:05.000Z","sessionId":"test-compact","uuid":"c-4","parentUuid":"c-3"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Sure, let me look at the parser code."}]},"timestamp":"2026-03-15T09:30:10.000Z","sessionId":"test-compact","uuid":"c-5","parentUuid":"c-4","requestId":"req-2"}
